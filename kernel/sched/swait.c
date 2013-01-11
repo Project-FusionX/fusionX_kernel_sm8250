@@ -35,6 +35,7 @@ EXPORT_SYMBOL(swake_up_locked);
 void swake_up_all_locked(struct swait_queue_head *q)
 {
 	struct swait_queue *curr;
+	int wakes = 0;
 
 	while (!list_empty(&q->task_list)) {
 
@@ -42,7 +43,11 @@ void swake_up_all_locked(struct swait_queue_head *q)
 					task_list);
 		wake_up_process(curr->task);
 		list_del_init(&curr->task_list);
+		wakes++;
 	}
+	if (pm_in_action)
+		return;
+	WARN(wakes > 2, "complete_all() with %d waiters\n", wakes);
 }
 EXPORT_SYMBOL(swake_up_all_locked);
 
@@ -83,7 +88,7 @@ void swake_up_all(struct swait_queue_head *q)
 }
 EXPORT_SYMBOL(swake_up_all);
 
-static void __prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait)
+void __prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait)
 {
 	wait->task = current;
 	if (list_empty(&wait->task_list))
