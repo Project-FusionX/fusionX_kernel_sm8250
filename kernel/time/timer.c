@@ -495,17 +495,11 @@ static inline void timer_set_idx(struct timer_list *timer, unsigned int idx)
 static inline unsigned calc_index(unsigned long expires, unsigned lvl,
 				  unsigned long *bucket_expiry)
 {
+	if (lvl != 0 && (expires & ~(UINT_MAX << LVL_SHIFT(lvl))))
+		expires = (expires + LVL_GRAN(lvl)) >> LVL_SHIFT(lvl);
+	else
+		expires = expires >> LVL_SHIFT(lvl);
 
-	/*
-	 * The timer wheel has to guarantee that a timer does not fire
-	 * early. Early expiry can happen due to:
-	 * - Timer is armed at the edge of a tick
-	 * - Truncation of the expiry time in the outer wheel levels
-	 *
-	 * Round up with level granularity to prevent this.
-	 */
-	expires = (expires >> LVL_SHIFT(lvl)) + 1;
-	*bucket_expiry = expires << LVL_SHIFT(lvl);
 	return LVL_OFFS(lvl) + (expires & LVL_MASK);
 }
 
