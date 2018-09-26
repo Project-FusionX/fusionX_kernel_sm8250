@@ -344,6 +344,7 @@ void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 	 * 0,0,* -> 0,1,* -> 0,0,1 pending, trylock
 	 */
 	val = atomic_fetch_or_acquire(_Q_PENDING_VAL, &lock->val);
+
 	/*
 	 * If we observe contention, there is a concurrent locker.
 	 *
