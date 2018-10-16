@@ -62,10 +62,9 @@ enum qlock_stats {
 	qstat_pv_wait_node,
 	qstat_lock_pending,
 	qstat_lock_slowpath,
-	qstat_lock_use_node2,
-	qstat_lock_use_node3,
-	qstat_lock_use_node4,
-	qstat_lock_no_node,
+	qstat_lock_idx1,
+	qstat_lock_idx2,
+	qstat_lock_idx3,
 	qstat_num,	/* Total number of statistical counters */
 	qstat_reset_cnts = qstat_num,
 };
@@ -93,10 +92,9 @@ static const char * const qstat_names[qstat_num + 1] = {
 	[qstat_pv_wait_node]       = "pv_wait_node",
 	[qstat_lock_pending]       = "lock_pending",
 	[qstat_lock_slowpath]      = "lock_slowpath",
-	[qstat_lock_use_node2]	   = "lock_use_node2",
-	[qstat_lock_use_node3]	   = "lock_use_node3",
-	[qstat_lock_use_node4]	   = "lock_use_node4",
-	[qstat_lock_no_node]	   = "lock_no_node",
+	[qstat_lock_idx1]	   = "lock_index1",
+	[qstat_lock_idx2]	   = "lock_index2",
+	[qstat_lock_idx3]	   = "lock_index3",
 	[qstat_reset_cnts]         = "reset_counters",
 };
 

@@ -430,7 +430,7 @@ pv_queue:
 	/*
 	 * Keep counts of non-zero index values:
 	 */
-	qstat_inc(qstat_lock_use_node2 + idx - 1, idx);
+	qstat_inc(qstat_lock_idx1 + idx - 1, idx);
 
 	/*
 	 * Ensure that we increment the head node->count before initialising
