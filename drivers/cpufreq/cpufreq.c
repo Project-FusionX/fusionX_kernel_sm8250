@@ -1240,14 +1240,9 @@ static int cpufreq_online(unsigned int cpu)
 			goto out_free_policy;
 		}
 
-		/*
-		 * The initialization has succeeded and the policy is online.
-		 * If there is a problem with its frequency table, take it
-		 * offline and drop it.
-		 */
 		ret = cpufreq_table_validate_and_sort(policy);
 		if (ret)
-			goto out_offline_policy;
+			goto out_exit_policy;
 
 		/* related_cpus should at least include policy->cpus. */
 		cpumask_copy(policy->related_cpus, policy->cpus);
