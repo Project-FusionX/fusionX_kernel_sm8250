@@ -478,9 +478,12 @@ int adreno_iommu_set_pt_ctx(struct adreno_ringbuffer *rb,
 			struct kgsl_pagetable *new_pt,
 			struct adreno_context *drawctxt)
 {
+	static unsigned int cmds[PAGE_SIZE / sizeof(unsigned int)]
+		____cacheline_aligned_in_smp;
 	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	struct kgsl_pagetable *cur_pt = device->mmu.defaultpagetable;
+	unsigned int count = 0;
 	int result = 0;
 
 	/* Switch the page table if a MMU is attached */
@@ -496,6 +499,15 @@ int adreno_iommu_set_pt_ctx(struct adreno_ringbuffer *rb,
 			return result;
 	}
 
-	/* Context switch */
-	return _set_ctxt_gpu(rb, drawctxt);
+	/* Add commands to set the current context in memstore */
+	count += __add_curr_ctxt_cmds(rb, cmds + count, drawctxt);
+
+	WARN(count > (PAGE_SIZE / sizeof(unsigned int)),
+			"Temp command buffer overflow\n");
+
+	result = adreno_ringbuffer_issue_internal_cmds(rb, KGSL_CMD_FLAGS_PMODE,
+			cmds, count);
+
+	return result;
+
 }
