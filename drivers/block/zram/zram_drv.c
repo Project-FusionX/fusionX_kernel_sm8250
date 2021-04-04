@@ -1092,13 +1092,13 @@ static ssize_t mm_stat_show(struct device *dev,
 
 	ret = scnprintf(buf, PAGE_SIZE,
 			"%8llu %8llu %8llu %8lu %8ld %8llu %8lu %8llu %8llu\n",
-			orig_size << PAGE_SHIFT,
-			(u64)atomic64_read(&zram->stats.compr_data_size),
-			mem_used << PAGE_SHIFT,
-			zram->limit_pages << PAGE_SHIFT,
-			max_used << PAGE_SHIFT,
-			(u64)atomic64_read(&zram->stats.same_pages),
-			atomic_long_read(&pool_stats.pages_compacted),
+			(orig_size << PAGE_SHIFT) / 1048576,
+			((u64)atomic64_read(&zram->stats.compr_data_size)) / 1048576,
+			(mem_used << PAGE_SHIFT) / 1048576,
+			(zram->limit_pages << PAGE_SHIFT) / 1048576,
+			(max_used << PAGE_SHIFT) / 1048576,
+			((u64)atomic64_read(&zram->stats.same_pages)) / 256,
+			(atomic_long_read(&pool_stats.pages_compacted)) / 256);
 	up_read(&zram->init_lock);
 
 	return ret;
