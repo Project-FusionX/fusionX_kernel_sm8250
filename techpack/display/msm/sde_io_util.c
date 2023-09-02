@@ -28,7 +28,6 @@ void dss_reg_w(struct dss_io_data *io, u32 offset, u32 value, u32 debug)
 	}
 
 	writel_relaxed(value, io->base + offset);
-
 	SDE_REG_LOG(SDE_REG_LOG_RSCC, value, offset);
 } /* dss_reg_w */
 EXPORT_SYMBOL(dss_reg_w);

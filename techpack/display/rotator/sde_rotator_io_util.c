@@ -29,7 +29,6 @@ void sde_reg_w(struct sde_io_data *io, u32 offset, u32 value, u32 debug)
 
 	DEV_DBG("sdeio:%6.6x:%8.8x\n", offset, value);
 	writel_relaxed(value, io->base + offset);
-
 } /* sde_reg_w */
 
 u32 sde_reg_r(struct sde_io_data *io, u32 offset, u32 debug)
