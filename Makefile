@@ -693,8 +693,6 @@ KBUILD_AFLAGS   += -O3 -march=armv8.2-a+lse+crypto+dotprod
 KBUILD_LDFLAGS  += -O3 --plugin-opt=O3
 KBUILD_CFLAGS   += -mcpu=cortex-a55
 KBUILD_AFLAGS   += -mcpu=cortex-a55
-KBUILD_CFLAGS   += -mllvm -polly
-KBUILD_CFLAGS   += -mllvm -mlgo
 ifeq ($(CONFIG_LD_IS_LLD), y)
 KBUILD_LDFLAGS  += -mllvm -mcpu=cortex-a55
 endif
