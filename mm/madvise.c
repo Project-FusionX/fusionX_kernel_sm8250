@@ -699,7 +699,7 @@ static int madvise_free_pte_range(pmd_t *pmd, unsigned long addr,
 out:
 	if (nr_swap) {
 		sync_mm_rss(mm);
-
+		
 		add_mm_counter(mm, MM_SWAPENTS, nr_swap);
 	}
 	arch_leave_lazy_mmu_mode();
