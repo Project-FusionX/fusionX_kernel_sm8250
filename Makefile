@@ -706,11 +706,12 @@ ifeq ($(CONFIG_LD_IS_LLD), y)
 KBUILD_LDFLAGS  += -mllvm -mcpu=cortex-a55
 endif
 else
-KBUILD_CFLAGS   += -O3 -mcpu=cortex-a76.cortex-a55
-KBUILD_AFLAGS   += -O3 -mcpu=cortex-a76.cortex-a55
-KBUILD_LDFLAGS  += -O3
+KBUILD_CFLAGS   += -O3 -march=armv8.2-a+lse+crypto+dotprod -mcpu=cortex-a76.cortex-a55
+KBUILD_AFLAGS   += -O3 -march=armv8.2-a+lse+crypto+dotprod -mcpu=cortex-a76.cortex-a55
+KBUILD_LDFLAGS  += -O3 --plugin-opt=O3
 
 KBUILD_CFLAGS   += -fcf-protection=none -fno-stack-protector
+
 
 ifdef CONFIG_INLINE_OPTIMIZATION
 ifdef CONFIG_CC_IS_CLANG
