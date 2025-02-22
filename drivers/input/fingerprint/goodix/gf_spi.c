@@ -340,6 +340,7 @@ static void nav_event_input(struct gf_dev *gf_dev, gf_nav_event_t nav_event)
 
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
+	struct gf_dev *gf_dev = &gf;
 #if defined(SUPPORT_NAV_EVENT)
 	gf_nav_event_t nav_event = GF_NAV_NONE;
 #endif
@@ -503,7 +504,6 @@ static void notification_work(struct work_struct *work)
 
 static irqreturn_t gf_irq(int irq, void *handle)
 {
-	struct gf_dev *gf_dev = &gf;
 #if defined(GF_NETLINK_ENABLE)
 	char temp[4] = { 0x0 };
 	temp[0] = GF_NET_EVENT_IRQ;
