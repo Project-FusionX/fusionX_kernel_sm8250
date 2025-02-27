@@ -740,7 +740,7 @@ static int fg_gen4_get_learned_capacity(void *data, int64_t *learned_cap_uah)
 {
 	struct fg_gen4_chip *chip = data;
 	struct fg_dev *fg;
-	int rc, act_cap_mah;
+	int rc = 0, act_cap_mah;
 	u8 buf[2];
 
 	if (!chip)
