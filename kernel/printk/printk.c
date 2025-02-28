@@ -825,7 +825,14 @@ static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 			endp++;
 			len -= endp - line;
 			line = endp;
+			if (strstr(line, "healthd") ||
+				strncmp(line, "logd: Skipping", sizeof("logd: Skipping")))
+				return ret;
 		}
+	}
+
+	if (strncmp("healthd", line, 7) == 0) {
+		return len;
 	}
 
 	printk_emit(facility, level, NULL, 0, "%s", line);
@@ -2202,7 +2209,7 @@ int add_preferred_console(char *name, int idx, char *options)
 	return __add_preferred_console(name, idx, options, NULL);
 }
 
-bool console_suspend_enabled = true;
+bool console_suspend_enabled = false;
 EXPORT_SYMBOL(console_suspend_enabled);
 
 static int __init console_suspend_disable(char *str)

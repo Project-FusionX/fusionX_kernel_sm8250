@@ -24,19 +24,11 @@
 #include "dual_fuel_gauge_class.h"
 #endif
 
-#define smblib_err(chg, fmt, ...)		\
-	pr_err("%s: %s: " fmt, chg->name,	\
-		__func__, ##__VA_ARGS__)	\
+#define smblib_err(chg, fmt, ...) 				\
+	do {} while (0)
 
 #define smblib_dbg(chg, reason, fmt, ...)			\
-	do {							\
-		if (*chg->debug_mask & (reason))		\
-			pr_err("%s: %s: " fmt, chg->name,	\
-				__func__, ##__VA_ARGS__);	\
-		else						\
-			pr_debug("%s: %s: " fmt, chg->name,	\
-				__func__, ##__VA_ARGS__);	\
-	} while (0)
+	do {} while (0)
 
 #define typec_rp_med_high(chg, typec_mode)			\
 	((typec_mode == POWER_SUPPLY_TYPEC_SOURCE_MEDIUM	\
@@ -900,7 +892,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 {
 	union power_supply_propval pval = {0,};
 	int rc = 0;
-	int termi = -220, batt_temp;
+	int termi = -220, batt_temp = 0;
 
 	if (!chg->bms_psy)
 		return 0;
@@ -3112,9 +3104,10 @@ int smblib_get_prop_batt_charge_done(struct smb_charger *chg,
 
 		if (chg->power_good_en) {
 			if ((smblib_get_fastcharge_mode(chg) == true)
-				&& (pval.intval >= 98))
+				&& (pval.intval >= 98)) {
 				smblib_set_fastcharge_mode(chg, false);
-			return 0;
+				return 0;
+			}
 		}
 
 		if (smblib_get_fastcharge_mode(chg) == true && (pval.intval >= 99))
@@ -3293,7 +3286,7 @@ static void smblib_set_wireless_present(struct smb_charger *chg, bool present)
 int smblib_get_prop_wireless_version(struct smb_charger *chg,
 				     union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
 	chg->idtp_psy = power_supply_get_by_name("idt");
 	if (chg->idtp_psy) {
@@ -3315,7 +3308,7 @@ int smblib_get_prop_wireless_version(struct smb_charger *chg,
 int smblib_get_prop_wireless_fw_version(struct smb_charger *chg,
 				     union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
 	chg->idtp_psy = power_supply_get_by_name("idt");
 	if (chg->idtp_psy) {
@@ -4633,7 +4626,7 @@ static int smblib_update_thermal_readings(struct smb_charger *chg)
 int smblib_set_vbus_disable(struct smb_charger *chg,
 					bool disable)
 {
-	int ret;
+	int ret = 0;
 
 	smblib_err(chg, "set vbus disable:%d\n", disable);
 	if (disable) {
@@ -4750,7 +4743,7 @@ static void smblib_after_ffc_chg_dis_work(struct work_struct *work)
 			after_ffc_chg_dis_work.work);
 	union power_supply_propval pval = {0, };
 	int rc = 0;
-	u64 delta_us;
+	u64 delta_us = 0;
 	static int count;
 
 	if (!chg->last_ffc_remove_time)
@@ -4908,7 +4901,7 @@ static void smblib_conn_therm_work(struct work_struct *work)
 					rc = power_supply_get_property(chg->cp_sec_psy,POWER_SUPPLY_PROP_CHARGING_ENABLED,&val);
 					if(!rc)
 						cp_slave_enabled = val.intval;
-	}
+				}
 				smblib_err(chg, "connect temp is too hot,cp_enable:%d,cp_sec_enable:%d,etry_count:%d\n",
 						cp_master_enabled,cp_slave_enabled,retry_count);
 
@@ -4943,7 +4936,6 @@ static void smblib_conn_therm_work(struct work_struct *work)
 			}
 			val.intval = 0;
 			power_supply_set_property(chg->batt_psy,POWER_SUPPLY_PROP_INPUT_SUSPEND,&val);
-
 		}
 		power_supply_changed(chg->usb_psy);
 	}
@@ -5155,7 +5147,7 @@ exit:
 int smblib_get_prop_voltage_wls_output(struct smb_charger *chg,
 				    union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
 	if (chg->wireless_bq)
 		return rc;
@@ -5179,7 +5171,7 @@ int smblib_get_prop_voltage_wls_output(struct smb_charger *chg,
 int smblib_get_prop_dc_present(struct smb_charger *chg,
 				union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 	u8 stat;
 
 	if (chg->chg_param.smb_version == PMI632_SUBTYPE) {
@@ -5266,7 +5258,7 @@ int smblib_get_prop_dc_current_max(struct smb_charger *chg,
 int smblib_get_prop_dc_voltage_max(struct smb_charger *chg,
 				    union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 	val->intval = MICRO_12V;
 
 	if (!chg->wls_psy)
@@ -5289,7 +5281,7 @@ int smblib_get_prop_dc_voltage_max(struct smb_charger *chg,
 int smblib_get_prop_dc_voltage_now(struct smb_charger *chg,
 				    union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
 	if (chg->wireless_bq)
 		return rc;
@@ -5330,7 +5322,7 @@ int smblib_set_prop_dc_current_max(struct smb_charger *chg,
 int smblib_set_prop_voltage_wls_output(struct smb_charger *chg,
 				    const union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
 	if (chg->wireless_bq)
 		return rc;
@@ -5368,7 +5360,7 @@ int smblib_set_prop_voltage_wls_output(struct smb_charger *chg,
 
 int smblib_set_prop_dc_reset(struct smb_charger *chg)
 {
-	int rc;
+	int rc = 0;
 
 	if (chg->wireless_bq)
 		return rc;
@@ -5655,7 +5647,7 @@ int smblib_get_prop_usb_online(struct smb_charger *chg,
 int smblib_get_usb_online(struct smb_charger *chg,
 			union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
 	if (chg->report_input_absent) {
 		val->intval = 0;
@@ -7489,9 +7481,6 @@ static void smblib_enable_otg_check_wl(struct smb_charger *chg, int enable){
 
 irqreturn_t default_irq_handler(int irq, void *data)
 {
-	struct smb_irq_data *irq_data = data;
-	struct smb_charger *chg = irq_data->parent_data;
-
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
 	return IRQ_HANDLED;
 }
@@ -7733,7 +7722,6 @@ irqreturn_t chg_state_change_irq_handler(int irq, void *data)
 		schedule_delayed_work(&chg->wireless_full_delay_work,
 				msecs_to_jiffies(WIRELESS_DELAY_WAKE_MS));
 	}
-
 	power_supply_changed(chg->batt_psy);
 	return IRQ_HANDLED;
 }
@@ -9336,7 +9324,6 @@ static void determine_thermal_current(struct smb_charger *chg)
 	}
 }
 
-
 static void smblib_slow_pd_wa(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger, slow_pd_wa_work.work);
@@ -9897,6 +9884,7 @@ static void typec_src_removal(struct smb_charger *chg)
 	vote(chg->usb_icl_votable, QC2_UNSUPPORTED_VOTER, false, 0);
 	vote(chg->usb_icl_votable, QC3P5_VOTER, false, 0);
 	vote(chg->fcc_votable, NON_PPS_PD_FCC_VOTER, false, 0);
+
 	/* reset usb irq voters */
 	vote(chg->limited_irq_disable_votable, CHARGER_TYPE_VOTER,
 			true, 0);
@@ -11690,7 +11678,7 @@ static void bms_update_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger,
 						bms_update_work);
-	int bms_i2c_error_count;
+	int bms_i2c_error_count = 0;
 	int ret;
 	static int input_suspend = 0;
 	union power_supply_propval val = {0,};

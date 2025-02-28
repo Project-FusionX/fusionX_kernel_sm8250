@@ -240,7 +240,7 @@ struct IpaUpdateFlowCtlMonitorData_t {
 };
 
 static DEFINE_MUTEX(uc_loaded_nb_lock);
-static BLOCKING_NOTIFIER_HEAD(uc_loaded_notifier);
+SRCU_NOTIFIER_HEAD_STATIC(uc_loaded_notifier);
 
 struct ipa3_uc_hdlrs ipa3_uc_hdlrs[IPA_HW_NUM_FEATURES] = { { 0 } };
 
@@ -432,7 +432,7 @@ static void ipa3_event_ring_hdlr(void)
 
 		if (((struct eventElement_t *) rp_va)->Opcode == BW_NOTIFY) {
 			e_b = ((struct eventElement_t *) rp_va);
-			IPADBG("prot(%d), index (%d) throughput (%lu)\n",
+			IPADBG("prot(%d), index (%d) throughput (%llu)\n",
 			e_b->Protocol,
 			e_b->Value.bw_param.ThresholdIndex,
 			e_b->Value.bw_param.throughput);
@@ -454,7 +454,7 @@ static void ipa3_event_ring_hdlr(void)
 		} else if (((struct eventElement_t *) rp_va)->Opcode
 			== QUOTA_NOTIFY) {
 			e_q = ((struct eventElement_t *) rp_va);
-			IPADBG("got quota-notify %d reach(%d) usage (%lu)\n",
+			IPADBG("got quota-notify %d reach(%d) usage (%llu)\n",
 			e_q->Protocol,
 			e_q->Value.quota_param.ThreasholdReached,
 			e_q->Value.quota_param.usage);
@@ -522,7 +522,7 @@ EXPORT_SYMBOL(ipa3_uc_loaded_check);
  *
  * Return: 0 on successful registration, negative errno otherwise
  *
- * See blocking_notifier_chain_register() for possible errno values
+ * See srcu_notifier_chain_register() for possible errno values
  */
 int ipa3_uc_register_ready_cb(struct notifier_block *nb)
 {
@@ -530,7 +530,7 @@ int ipa3_uc_register_ready_cb(struct notifier_block *nb)
 
 	mutex_lock(&uc_loaded_nb_lock);
 
-	rc = blocking_notifier_chain_register(&uc_loaded_notifier, nb);
+	rc = srcu_notifier_chain_register(&uc_loaded_notifier, nb);
 	if (!rc && ipa3_ctx->uc_ctx.uc_loaded)
 		(void) nb->notifier_call(nb, false, ipa3_ctx);
 
@@ -549,11 +549,11 @@ EXPORT_SYMBOL(ipa3_uc_register_ready_cb);
  *
  * Return: 0 on successful unregistration, negative errno otherwise
  *
- * See blocking_notifier_chain_unregister() for possible errno values
+ * See srcu_notifier_chain_unregister() for possible errno values
  */
 int ipa3_uc_unregister_ready_cb(struct notifier_block *nb)
 {
-	return blocking_notifier_chain_unregister(&uc_loaded_notifier, nb);
+	return srcu_notifier_chain_unregister(&uc_loaded_notifier, nb);
 }
 EXPORT_SYMBOL(ipa3_uc_unregister_ready_cb);
 
@@ -699,7 +699,7 @@ static void ipa3_uc_response_hdlr(enum ipa_irq_type interrupt,
 
 		ipa3_ctx->uc_ctx.uc_loaded = true;
 
-		(void) blocking_notifier_call_chain(&uc_loaded_notifier, true,
+		(void) srcu_notifier_call_chain(&uc_loaded_notifier, true,
 			ipa3_ctx);
 
 		mutex_unlock(&uc_loaded_nb_lock);
@@ -1381,7 +1381,7 @@ int ipa3_uc_quota_monitor(uint64_t quota)
 		false, 10 * HZ);
 
 	if (res) {
-		IPAERR(" faile to set quota %d, number offset %d\n",
+		IPAERR(" faile to set quota %llu, number offset %d\n",
 			quota_info->params.WdiQM.Quota,
 			quota_info->params.WdiQM.info.Num);
 		goto free_cmd;
@@ -1442,14 +1442,14 @@ int ipa3_uc_bw_monitor(struct ipa_wdi_bw_info *info)
 
 	for (i = 0; i < info->num; i++) {
 		bw_info->params.WdiBw.BwThreshold[i] = info->threshold[i];
-		IPADBG("%d-st, %lu\n", i, bw_info->params.WdiBw.BwThreshold[i]);
+		IPADBG("%d-st, %llu\n", i, bw_info->params.WdiBw.BwThreshold[i]);
 		ipa3_ctx->uc_ctx.info.threshold[i] = info->threshold[i];
 		if (info->threshold[i] > ipa3_ctx->uc_ctx.bw_info_max)
 			ipa3_ctx->uc_ctx.bw_info_max = info->threshold[i];
 	}
 	/* set max to both UL+DL */
 	ipa3_ctx->uc_ctx.bw_info_max *= 2;
-	IPADBG("bw-monitor max %lu\n", ipa3_ctx->uc_ctx.bw_info_max);
+	IPADBG("bw-monitor max %llu\n", ipa3_ctx->uc_ctx.bw_info_max);
 
 	bw_info->params.WdiBw.info.Num = 8;
 	ind = ipa3_ctx->fnr_info.hw_counter_offset +
