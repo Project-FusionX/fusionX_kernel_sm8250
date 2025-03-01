@@ -904,7 +904,7 @@ static void adreno_of_get_bimc_iface_clk(struct adreno_device *adreno_dev,
 				"bimc_gpu_clk");
 		if (IS_ERR_OR_NULL(pwr->gpu_bimc_int_clk)) {
 			dev_err(&device->pdev->dev,
-					"dt: Couldn't get bimc_gpu_clk (%d)\n",
+					"dt: Couldn't get bimc_gpu_clk (%ld)\n",
 					PTR_ERR(pwr->gpu_bimc_int_clk));
 			pwr->gpu_bimc_int_clk = NULL;
 		}
@@ -1839,7 +1839,7 @@ static int adreno_init(struct kgsl_device *device)
 	set_bit(ADRENO_DEVICE_INITIALIZED, &adreno_dev->priv);
 
 	/*
-	 * Allocate a small chunk of memory for precise drawobj profiling for
+	 * Allocate a small chunk of memory for precise drawobj  for
 	 * those targets that have the always on timer
 	 */
 
@@ -3105,6 +3105,9 @@ int adreno_spin_idle(struct adreno_device *adreno_dev, unsigned int timeout)
 		if (adreno_isidle(KGSL_DEVICE(adreno_dev)))
 			return 0;
 
+		/* relax tight loop */
+		cond_resched();
+
 	} while (time_before(jiffies, wait));
 
 	/*
@@ -3173,7 +3176,7 @@ static int adreno_drain(struct kgsl_device *device)
 /* Caller must hold the device mutex. */
 static int adreno_suspend_context(struct kgsl_device *device)
 {
-	/* process any profiling results that are available */
+	/* process any  results that are available */
 	adreno_profile_process_results(ADRENO_DEVICE(device));
 
 	/* Wait for the device to go idle */

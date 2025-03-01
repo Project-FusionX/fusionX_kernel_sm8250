@@ -3125,6 +3125,7 @@ static noinline int audit_inode_permission(struct inode *inode,
 					   u32 perms, u32 audited, u32 denied,
 					   int result)
 {
+#ifdef CONFIG_AUDIT
 	struct common_audit_data ad;
 	struct inode_security_struct *isec = inode->i_security;
 	int rc;
@@ -3137,6 +3138,7 @@ static noinline int audit_inode_permission(struct inode *inode,
 			    audited, denied, result, &ad);
 	if (rc)
 		return rc;
+#endif
 	return 0;
 }
 
@@ -5584,7 +5586,7 @@ static int selinux_nlmsg_perm(struct sock *sk, struct sk_buff *skb)
 		} else if (rc == -EINVAL) {
 			/* -EINVAL is a missing msg/perm mapping */
 			pr_warn_ratelimited("SELinux: unrecognized netlink"
-				" message: protocol=%hu nlmsg_type=%hu sclass=%s"
+				" message: protocol=%d nlmsg_type=%hu sclass=%s"
 				" pid=%d comm=%s\n",
 				sk->sk_protocol, nlh->nlmsg_type,
 				secclass_map[sclass - 1].name,

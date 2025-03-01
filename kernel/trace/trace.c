@@ -2846,6 +2846,7 @@ static void put_trace_buf(void)
 	this_cpu_dec(trace_percpu_buffer->nesting);
 }
 
+#ifdef CONFIG_TRACE_PRINTK
 static int alloc_percpu_trace_buffer(void)
 {
 	struct trace_buffer_struct __percpu *buffers;
@@ -2857,11 +2858,13 @@ static int alloc_percpu_trace_buffer(void)
 	trace_percpu_buffer = buffers;
 	return 0;
 }
+#endif /* CONFIG_TRACE_PRINTK */
 
 static int buffers_allocated;
 
 void trace_printk_init_buffers(void)
 {
+#ifdef CONFIG_TRACE_PRINTK
 	if (buffers_allocated)
 		return;
 
@@ -2898,6 +2901,9 @@ void trace_printk_init_buffers(void)
 	 */
 	if (global_trace.trace_buffer.buffer)
 		tracing_start_cmdline_record();
+#else
+	return;
+#endif /* CONFIG_TRACE_PRINTK */
 }
 
 void trace_printk_start_comm(void)
@@ -4519,7 +4525,7 @@ tracing_trace_options_write(struct file *filp, const char __user *ubuf,
 {
 	struct seq_file *m = filp->private_data;
 	struct trace_array *tr = m->private;
-	char buf[64];
+	char buf[64] = "0";
 	int ret;
 
 	if (cnt >= sizeof(buf))
@@ -5484,7 +5490,7 @@ tracing_set_trace_write(struct file *filp, const char __user *ubuf,
 			size_t cnt, loff_t *ppos)
 {
 	struct trace_array *tr = filp->private_data;
-	char buf[MAX_TRACER_SIZE+1];
+	char buf[MAX_TRACER_SIZE+1] = "0";
 	int i;
 	size_t ret;
 	int err;
@@ -6319,7 +6325,7 @@ static ssize_t tracing_clock_write(struct file *filp, const char __user *ubuf,
 {
 	struct seq_file *m = filp->private_data;
 	struct trace_array *tr = m->private;
-	char buf[64];
+	char buf[64] = "0";
 	const char *clockstr;
 	int ret;
 

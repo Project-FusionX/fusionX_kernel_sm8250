@@ -1728,7 +1728,7 @@ static int npu_parse_dt_clock(struct npu_device *npu_dev)
 		if (npu_clk_need_reset(clock_name)) {
 			reset = devm_reset_control_get(&pdev->dev, clock_name);
 			if (IS_ERR(reset))
-				NPU_WARN("no reset for %s %d\n", clock_name,
+				NPU_WARN("no reset for %s %ld\n", clock_name,
 					PTR_ERR(reset));
 			else
 				core_clks[i].reset = reset;
@@ -2337,7 +2337,7 @@ static int npu_mbox_init(struct npu_device *npu_dev)
 			} else {
 				mbox->client_id = curr_ph.args[0];
 				mbox->signal_id = curr_ph.args[1];
-				NPU_DBG("argument for mailbox %x is %x %x\n",
+				NPU_DBG("argument for mailbox %s is %x %x\n",
 					mbox_name, curr_ph.args[0],
 					curr_ph.args[1]);
 			}
@@ -2587,8 +2587,6 @@ static int npu_probe(struct platform_device *pdev)
 		goto error_res_init;
 	}
 
-	npu_debugfs_init(npu_dev);
-
 	rc = npu_host_init(npu_dev);
 	if (rc) {
 		NPU_ERR("unable to init host\n");
@@ -2641,7 +2639,6 @@ static int npu_remove(struct platform_device *pdev)
 
 	npu_dev = platform_get_drvdata(pdev);
 	npu_host_deinit(npu_dev);
-	npu_debugfs_deinit(npu_dev);
 	npu_cdsprm_cxlimit_deinit(npu_dev);
 	if (npu_dev->tcdev)
 		thermal_cooling_device_unregister(npu_dev->tcdev);
