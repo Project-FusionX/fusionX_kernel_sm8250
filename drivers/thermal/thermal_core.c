@@ -1736,10 +1736,15 @@ thermal_sconfig_store(struct device *dev,
 
 	ret = kstrtoint(buf, 10, &val);
 
-	atomic_set(&switch_mode, val);
-
 	if (ret)
 		return ret;
+
+	// Check if the value is -1 or 0, if so set to 10, else use the provided value
+	if (val == -1 || val == 0)
+		atomic_set(&switch_mode, 10);
+	else
+		atomic_set(&switch_mode, val);
+
 	return len;
 }
 
@@ -2091,7 +2096,7 @@ static int screen_state_for_thermal_callback(struct notifier_block *nb,
 		break;
 	}
 
-	pr_warn("%s: %s, sm.screen_state = %d\n", __func__, get_screen_state_name(blank),
+	pr_debug("%s: %s, sm.screen_state = %d\n", __func__, get_screen_state_name(blank),
 			sm.screen_state);
 	sysfs_notify(&thermal_message_dev.kobj, NULL, "screen_state");
 
