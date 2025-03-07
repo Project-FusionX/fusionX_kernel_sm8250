@@ -23,10 +23,6 @@
 #include "sde_dbg.h"
 #include "dsi_parser.h"
 
-#ifdef CONFIG_DRM_SDE_EXPO
-#include "sde_expo_dim_layer.h"
-#endif
-
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
 
@@ -243,12 +239,6 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 		       dsi_display->name, rc);
 		goto error;
 	}
-
-#ifdef CONFIG_DRM_SDE_EXPO
-	if(panel->dimlayer_exposure) {
-		bl_temp = expo_map_dim_level((u32)bl_temp, dsi_display);
-	}
-#endif
 
 	rc = dsi_panel_set_backlight(panel, (u32)bl_temp);
 	if (rc)
@@ -4107,7 +4097,9 @@ static int dsi_display_res_init(struct dsi_display *display)
 		ctrl->ctrl = dsi_ctrl_get(ctrl->ctrl_of_node);
 		if (IS_ERR_OR_NULL(ctrl->ctrl)) {
 			rc = PTR_ERR(ctrl->ctrl);
-			DSI_ERR("failed to get dsi controller, rc=%d\n", rc);
+			if (rc != -EPROBE_DEFER)
+				DSI_ERR("failed to get dsi controller, rc=%d\n", rc);
+
 			ctrl->ctrl = NULL;
 			goto error_ctrl_put;
 		}
@@ -5163,8 +5155,10 @@ static int _dsi_display_dev_init(struct dsi_display *display)
 
 	rc = dsi_display_res_init(display);
 	if (rc) {
-		DSI_ERR("[%s] failed to initialize resources, rc=%d\n",
-		       display->name, rc);
+		if (rc != -EPROBE_DEFER)
+			DSI_ERR("[%s] failed to initialize resources, rc=%d\n",
+			       display->name, rc);
+
 		goto error;
 	}
 error:
@@ -5548,70 +5542,8 @@ static DEVICE_ATTR(fod_ui, 0444,
 			sysfs_fod_ui_read,
 			NULL);
 
-#ifdef CONFIG_DRM_SDE_EXPO
-static ssize_t sysfs_dimlayer_exposure_read(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct dsi_display *display;
-	struct dsi_panel *panel;
-	bool status;
-
-	display = dev_get_drvdata(dev);
-	if (!display) {
-		pr_err("Invalid display\n");
-		return -EINVAL;
-	}
-
-	panel = display->panel;
-
-	mutex_lock(&panel->panel_lock);
-	status = panel->dimlayer_exposure;
-	mutex_unlock(&panel->panel_lock);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", status);
-}
-
-static ssize_t sysfs_dimlayer_exposure_write(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct dsi_display *display;
-	struct dsi_panel *panel;
-	struct drm_connector *connector = NULL;
-	bool status;
-	int rc = 0;
-
-	display = dev_get_drvdata(dev);
-	if (!display) {
-		pr_err("Invalid display\n");
-		return -EINVAL;
-	}
-
-	rc = kstrtobool(buf, &status);
-	if (rc) {
-		pr_err("%s: kstrtobool failed. rc=%d\n", __func__, rc);
-		return rc;
-	}
-
-	panel = display->panel;
-
-	panel->dimlayer_exposure = status;
-	dsi_display_set_backlight(connector, display, panel->bl_config.bl_level);
-
-	return count;
-}
-#endif
-
-#ifdef CONFIG_DRM_SDE_EXPO
-static DEVICE_ATTR(dimlayer_exposure, 0644,
-			sysfs_dimlayer_exposure_read,
-			sysfs_dimlayer_exposure_write);
-#endif
-
 static struct attribute *display_fs_attrs[] = {
 	&dev_attr_fod_ui.attr,
-#ifdef CONFIG_DRM_SDE_EXPO
-	&dev_attr_dimlayer_exposure.attr,
-#endif
 	&dev_attr_hbm.attr,
 	NULL,
 };
@@ -5984,7 +5916,9 @@ static int dsi_display_init(struct dsi_display *display)
 
 	rc = _dsi_display_dev_init(display);
 	if (rc) {
-		DSI_ERR("device init failed, rc=%d\n", rc);
+		if (rc != -EPROBE_DEFER)
+			DSI_ERR("device init failed, rc=%d\n", rc);
+
 		goto end;
 	}
 
@@ -7532,285 +7466,12 @@ error:
 	return rc;
 }
 
-static bool _dsi_display_validate_host_state(struct dsi_display *display)
-{
-	int i;
-	struct dsi_display_ctrl *ctrl;
-
-	display_for_each_ctrl(i, display) {
-		ctrl = &display->ctrl[i];
-		if (!ctrl->ctrl)
-			continue;
-		if (!dsi_ctrl_validate_host_state(ctrl->ctrl))
-			return false;
-	}
-
-	return true;
-}
-
-static void dsi_display_handle_fifo_underflow(struct work_struct *work)
-{
-	struct dsi_display *display = NULL;
-
-	display = container_of(work, struct dsi_display, fifo_underflow_work);
-	if (!display || !display->panel ||
-	    atomic_read(&display->panel->esd_recovery_pending)) {
-		DSI_DEBUG("Invalid recovery use case\n");
-		return;
-	}
-
-	mutex_lock(&display->display_lock);
-
-	if (!_dsi_display_validate_host_state(display)) {
-		mutex_unlock(&display->display_lock);
-		return;
-	}
-
-	DSI_DEBUG("handle DSI FIFO underflow error\n");
-
-	dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_ALL_CLKS, DSI_CLK_ON);
-	dsi_display_soft_reset(display);
-	dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_ALL_CLKS, DSI_CLK_OFF);
-
-	mutex_unlock(&display->display_lock);
-}
-
-static void dsi_display_handle_fifo_overflow(struct work_struct *work)
-{
-	struct dsi_display *display = NULL;
-	struct dsi_display_ctrl *ctrl;
-	int i, rc;
-	int mask = BIT(20); /* clock lane */
-	int (*cb_func)(void *event_usr_ptr,
-		uint32_t event_idx, uint32_t instance_idx,
-		uint32_t data0, uint32_t data1,
-		uint32_t data2, uint32_t data3);
-	void *data;
-	u32 version = 0;
-
-	display = container_of(work, struct dsi_display, fifo_overflow_work);
-	if (!display || !display->panel ||
-	    (display->panel->panel_mode != DSI_OP_VIDEO_MODE) ||
-	    atomic_read(&display->panel->esd_recovery_pending)) {
-		DSI_DEBUG("Invalid recovery use case\n");
-		return;
-	}
-
-	mutex_lock(&display->display_lock);
-
-	if (!_dsi_display_validate_host_state(display)) {
-		mutex_unlock(&display->display_lock);
-		return;
-	}
-
-	DSI_DEBUG("handle DSI FIFO overflow error\n");
-	dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_ALL_CLKS, DSI_CLK_ON);
-
-	/*
-	 * below recovery sequence is not applicable to
-	 * hw version 2.0.0, 2.1.0 and 2.2.0, so return early.
-	 */
-	ctrl = &display->ctrl[display->clk_master_idx];
-	version = dsi_ctrl_get_hw_version(ctrl->ctrl);
-	if (!version || (version < 0x20020001))
-		goto end;
-
-	/* reset ctrl and lanes */
-	display_for_each_ctrl(i, display) {
-		ctrl = &display->ctrl[i];
-		rc = dsi_ctrl_reset(ctrl->ctrl, mask);
-		rc = dsi_phy_lane_reset(ctrl->phy);
-	}
-
-	/* wait for display line count to be in active area */
-	ctrl = &display->ctrl[display->clk_master_idx];
-	if (ctrl->ctrl->recovery_cb.event_cb) {
-		cb_func = ctrl->ctrl->recovery_cb.event_cb;
-		data = ctrl->ctrl->recovery_cb.event_usr_ptr;
-		rc = cb_func(data, SDE_CONN_EVENT_VID_FIFO_OVERFLOW,
-				display->clk_master_idx, 0, 0, 0, 0);
-		if (rc < 0) {
-			DSI_DEBUG("sde callback failed\n");
-			goto end;
-		}
-	}
-
-	/* Enable Video mode for DSI controller */
-	display_for_each_ctrl(i, display) {
-		ctrl = &display->ctrl[i];
-		dsi_ctrl_vid_engine_en(ctrl->ctrl, true);
-	}
-	/*
-	 * Add sufficient delay to make sure
-	 * pixel transmission has started
-	 */
-	udelay(200);
-end:
-	dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_ALL_CLKS, DSI_CLK_OFF);
-	mutex_unlock(&display->display_lock);
-}
-
-static void dsi_display_handle_lp_rx_timeout(struct work_struct *work)
-{
-	struct dsi_display *display = NULL;
-	struct dsi_display_ctrl *ctrl;
-	int i, rc;
-	int mask = (BIT(20) | (0xF << 16)); /* clock lane and 4 data lane */
-	int (*cb_func)(void *event_usr_ptr,
-		uint32_t event_idx, uint32_t instance_idx,
-		uint32_t data0, uint32_t data1,
-		uint32_t data2, uint32_t data3);
-	void *data;
-	u32 version = 0;
-
-	display = container_of(work, struct dsi_display, lp_rx_timeout_work);
-	if (!display || !display->panel ||
-	    (display->panel->panel_mode != DSI_OP_VIDEO_MODE) ||
-	    atomic_read(&display->panel->esd_recovery_pending)) {
-		DSI_DEBUG("Invalid recovery use case\n");
-		return;
-	}
-
-	mutex_lock(&display->display_lock);
-
-	if (!_dsi_display_validate_host_state(display)) {
-		mutex_unlock(&display->display_lock);
-		return;
-	}
-
-	DSI_DEBUG("handle DSI LP RX Timeout error\n");
-
-	dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_ALL_CLKS, DSI_CLK_ON);
-
-	/*
-	 * below recovery sequence is not applicable to
-	 * hw version 2.0.0, 2.1.0 and 2.2.0, so return early.
-	 */
-	ctrl = &display->ctrl[display->clk_master_idx];
-	version = dsi_ctrl_get_hw_version(ctrl->ctrl);
-	if (!version || (version < 0x20020001))
-		goto end;
-
-	/* reset ctrl and lanes */
-	display_for_each_ctrl(i, display) {
-		ctrl = &display->ctrl[i];
-		rc = dsi_ctrl_reset(ctrl->ctrl, mask);
-		rc = dsi_phy_lane_reset(ctrl->phy);
-	}
-
-	ctrl = &display->ctrl[display->clk_master_idx];
-	if (ctrl->ctrl->recovery_cb.event_cb) {
-		cb_func = ctrl->ctrl->recovery_cb.event_cb;
-		data = ctrl->ctrl->recovery_cb.event_usr_ptr;
-		rc = cb_func(data, SDE_CONN_EVENT_VID_FIFO_OVERFLOW,
-				display->clk_master_idx, 0, 0, 0, 0);
-		if (rc < 0) {
-			DSI_DEBUG("Target is in suspend/shutdown\n");
-			goto end;
-		}
-	}
-
-	/* Enable Video mode for DSI controller */
-	display_for_each_ctrl(i, display) {
-		ctrl = &display->ctrl[i];
-		dsi_ctrl_vid_engine_en(ctrl->ctrl, true);
-	}
-
-	/*
-	 * Add sufficient delay to make sure
-	 * pixel transmission as started
-	 */
-	udelay(200);
-end:
-	dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_ALL_CLKS, DSI_CLK_OFF);
-	mutex_unlock(&display->display_lock);
-}
-
-static int dsi_display_cb_error_handler(void *data,
-		uint32_t event_idx, uint32_t instance_idx,
-		uint32_t data0, uint32_t data1,
-		uint32_t data2, uint32_t data3)
-{
-	struct dsi_display *display =  data;
-
-	if (!display || !(display->err_workq))
-		return -EINVAL;
-
-	switch (event_idx) {
-	case DSI_FIFO_UNDERFLOW:
-		queue_work(display->err_workq, &display->fifo_underflow_work);
-		break;
-	case DSI_FIFO_OVERFLOW:
-		queue_work(display->err_workq, &display->fifo_overflow_work);
-		break;
-	case DSI_LP_Rx_TIMEOUT:
-		queue_work(display->err_workq, &display->lp_rx_timeout_work);
-		break;
-	default:
-		DSI_WARN("unhandled error interrupt: %d\n", event_idx);
-		break;
-	}
-
-	return 0;
-}
-
 static void dsi_display_register_error_handler(struct dsi_display *display)
 {
-	int i = 0;
-	struct dsi_display_ctrl *ctrl;
-	struct dsi_event_cb_info event_info;
-
-	if (!display)
-		return;
-
-	display->err_workq = create_singlethread_workqueue("dsi_err_workq");
-	if (!display->err_workq) {
-		DSI_ERR("failed to create dsi workq!\n");
-		return;
-	}
-
-	INIT_WORK(&display->fifo_underflow_work,
-				dsi_display_handle_fifo_underflow);
-	INIT_WORK(&display->fifo_overflow_work,
-				dsi_display_handle_fifo_overflow);
-	INIT_WORK(&display->lp_rx_timeout_work,
-				dsi_display_handle_lp_rx_timeout);
-
-	memset(&event_info, 0, sizeof(event_info));
-
-	event_info.event_cb = dsi_display_cb_error_handler;
-	event_info.event_usr_ptr = display;
-
-	display_for_each_ctrl(i, display) {
-		ctrl = &display->ctrl[i];
-		ctrl->ctrl->irq_info.irq_err_cb = event_info;
-	}
 }
 
 static void dsi_display_unregister_error_handler(struct dsi_display *display)
 {
-	int i = 0;
-	struct dsi_display_ctrl *ctrl;
-
-	if (!display)
-		return;
-
-	display_for_each_ctrl(i, display) {
-		ctrl = &display->ctrl[i];
-		memset(&ctrl->ctrl->irq_info.irq_err_cb,
-		       0, sizeof(struct dsi_event_cb_info));
-	}
-
-	if (display->err_workq) {
-		destroy_workqueue(display->err_workq);
-		display->err_workq = NULL;
-	}
 }
 
 int dsi_display_prepare(struct dsi_display *display)
@@ -8654,9 +8315,10 @@ int dsi_display_unprepare(struct dsi_display *display)
 
 	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
 			DSI_CORE_CLK, DSI_CLK_OFF);
-	if (rc)
+	if (rc) {
 		DSI_ERR("[%s] failed to disable DSI clocks, rc=%d\n",
 		       display->name, rc);
+	}
 
 	/* destrory dsi isr set up */
 	dsi_display_ctrl_isr_configure(display, false);

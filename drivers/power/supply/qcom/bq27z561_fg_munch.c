@@ -39,7 +39,7 @@ enum print_reason {
 	PR_DEBUG	= BIT(3),
 };
 
-static int debug_mask = PR_OEM;
+static int debug_mask = PR_INTERRUPT;
 module_param_named(
 	debug_mask, debug_mask, int, 0600
 );
@@ -785,7 +785,7 @@ static int fg_get_fastcharge_mode(struct bq_fg_chip *bq)
 
 static int fg_set_fastcharge_mode(struct bq_fg_chip *bq, bool enable)
 {
-	u8 data[2];
+	u8 data[2] = {0};
 	int ret;
 
 	data[0] = enable;
@@ -1662,6 +1662,7 @@ static int fg_get_property(struct power_supply *psy, enum power_supply_property 
 			val->intval = bq->batt_ttf;
 			break;
                 }
+
 		ret = fg_read_ttf(bq);
 		if (ret >= 0)
 			bq->batt_ttf = ret;
@@ -2906,7 +2907,6 @@ static int fg_check_device(struct bq_fg_chip *bq)
 
 	return ret;
 }
-
 
 static int bq_fg_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)

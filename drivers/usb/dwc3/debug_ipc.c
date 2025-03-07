@@ -7,9 +7,9 @@
 
 #include <linux/moduleparam.h>
 
-static unsigned int ep_addr_rxdbg_mask = 1;
+static unsigned int ep_addr_rxdbg_mask;
 module_param(ep_addr_rxdbg_mask, uint, 0644);
-static unsigned int ep_addr_txdbg_mask = 1;
+static unsigned int ep_addr_txdbg_mask;
 module_param(ep_addr_txdbg_mask, uint, 0644);
 
 static int allow_dbg_print(u8 ep_num)
@@ -181,7 +181,7 @@ void dwc3_dbg_dma_dequeue(struct dwc3 *dwc, u8 ep_num, struct dwc3_request *req)
 		return;
 
 	ipc_log_string(dwc->dwc_dma_ipc_log_ctxt,
-		"%02X-%-3.3s %-25.25s 0x%pK 0x%lx 0x%lx", ep_num >> 1,
+		"%02X-%-3.3s %-25.25s 0x%pK 0x%llx 0x%llx", ep_num >> 1,
 		ep_num & 1 ? "IN":"OUT", "DEQUEUE", &req->request,
 		req->request.dma, req->trb_dma);
 }

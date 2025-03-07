@@ -691,8 +691,9 @@ int tg_nop(struct task_group *tg, void *data)
 }
 #endif
 
-static void set_load_weight(struct task_struct *p, bool update_load)
+static void set_load_weight(struct task_struct *p)
 {
+	bool update_load = !(p->state & TASK_NEW);
 	int prio = p->static_prio - MAX_RT_PRIO;
 	struct load_weight lw;
 
@@ -5205,7 +5206,7 @@ void set_user_nice(struct task_struct *p, long nice)
 		put_prev_task(rq, p);
 
 	p->static_prio = NICE_TO_PRIO(nice);
-	set_load_weight(p, true);
+	set_load_weight(p);
 	old_prio = p->prio;
 	p->prio = effective_prio(p);
 	delta = p->prio - old_prio;
@@ -6746,34 +6747,6 @@ void show_state_filter(unsigned long state_filter)
 		debug_show_all_locks();
 }
 EXPORT_SYMBOL_GPL(show_state_filter);
-
-void show_state_filter_single(unsigned long state_filter)
-{
-	struct task_struct *g, *p;
-
-#if BITS_PER_LONG == 32
-	printk(KERN_INFO
-		"  task                PC stack   pid father\n");
-#else
-	printk(KERN_INFO
-		"  task                        PC stack   pid father\n");
-#endif
-	rcu_read_lock();
-	for_each_process_thread(g, p) {
-		/*
-		 * reset the NMI-timeout, listing all files on a slow
-		 * console might take a lot of time:
-		 * Also, reset softlockup watchdogs on all CPUs, because
-		 * another CPU might be blocked waiting for us to process
-		 * an IPI.
-		 */
-		touch_nmi_watchdog();
-		touch_all_softlockup_watchdogs();
-		if (p->state == state_filter)
-			sched_show_task(p);
-	}
-	rcu_read_unlock();
-}
 
 /**
  * init_idle - set up an idle thread for a given CPU

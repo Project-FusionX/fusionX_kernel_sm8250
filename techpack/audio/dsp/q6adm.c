@@ -884,7 +884,7 @@ int crus_adm_set_params(int port_id, int copp_idx, uint32_t module_id,
 	int port_idx = 0;
 	int rc  = 0;
 
-	pr_info("[CSPL] %s: config: port_idx %d copp_idx  %d module 0x%d, len=%d\n",
+	pr_debug("[CSPL] %s: config: port_idx %d copp_idx  %d module 0x%d, len=%d\n",
 			__func__, port_idx, copp_idx,module_id, params_length);
 
 	port_id = q6audio_convert_virtual_to_portid(port_id);
@@ -909,7 +909,7 @@ int crus_adm_set_params(int port_id, int copp_idx, uint32_t module_id,
 
 	atomic_set(&this_adm.copp.stat[port_idx][copp_idx], -1);
 
-	pr_info("[CSPL] %s: config: port_idx %d copp_idx  %d copp SR %d, len=%d\n",
+	pr_debug("[CSPL] %s: config: port_idx %d copp_idx  %d copp SR %d, len=%d\n",
 			__func__, port_idx, copp_idx,
 			atomic_read(&this_adm.copp.rate[port_idx][copp_idx]),
 			params_length);
@@ -932,7 +932,7 @@ int crus_adm_get_params(int port_id, int copp_idx, uint32_t module_id,
 	int ret = 0;
 	struct param_hdr_v3 param_hdr;
 
-	pr_info("[CSPL] %s: Enter, port_id %d, copp_idx %d, len= %d\n",
+	pr_debug("[CSPL] %s: Enter, port_id %d, copp_idx %d, len= %d\n",
 		__func__, port_id, copp_idx, params_length);
 
 	memset(&param_hdr, 0, sizeof(param_hdr));
@@ -944,7 +944,7 @@ int crus_adm_get_params(int port_id, int copp_idx, uint32_t module_id,
 				client_id, NULL, &param_hdr,
 				params);
 	if (ret) {
-		pr_err("%s: get parameters failed ret:%d\n", __func__, ret);
+		pr_debug("%s: get parameters failed ret:%d\n", __func__, ret);
 		ret = -EINVAL;
 		goto done;
 	}
@@ -2405,8 +2405,6 @@ static void send_adm_cal_type(int cal_index, int path, int port_id,
 	struct cal_block_data		*cal_block = NULL;
 	int ret;
 
-	pr_debug("%s: cal index %d\n", __func__, cal_index);
-
 	if (this_adm.cal_data[cal_index] == NULL) {
 		pr_debug("%s: cal_index %d not allocated!\n",
 			__func__, cal_index);
@@ -3133,7 +3131,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	int param_size;
 	int num_ec_ref_rx_chans = this_adm.num_ec_ref_rx_chans;
 
-	pr_err("%s:port %#x path:%d rate:%d channel_mode:%d perf_mode:%d topology 0x%x bit_width %d \
+	pr_debug("%s:port %#x path:%d rate:%d channel_mode:%d perf_mode:%d topology 0x%x bit_width %d \
 		app_type %d acdb_id %d session_type %d passthr_mode %d \n",
 			__func__, port_id, path, rate, channel_mode, perf_mode,
 				topology, bit_width, app_type, acdb_id, session_type, passthr_mode);
@@ -3939,7 +3937,7 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 	int usb_copp_idx = 0;
 	struct apr_hdr usb_close;
 
-	pr_err("%s: port_id=0x%x perf_mode: %d copp_idx: %d\n", __func__,
+	pr_debug("%s: port_id=0x%x perf_mode: %d copp_idx: %d\n", __func__,
 		 port_id, perf_mode, copp_idx);
 
 	port_id = q6audio_convert_virtual_to_portid(port_id);
