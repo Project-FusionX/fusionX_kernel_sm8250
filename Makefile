@@ -692,12 +692,11 @@ KBUILD_LDFLAGS  += -Os
 else ifeq ($(cc-name),clang)
 KBUILD_CFLAGS   += -mllvm -hot-cold-split=true
 KBUILD_CFLAGS   += -fcf-protection=none -fno-stack-protector
-
 # MLGO
 KBUILD_CFLAGS   += -mllvm -regalloc-enable-advisor=release
 KBUILD_LDFLAGS  += -mllvm -regalloc-enable-advisor=release
 KBUILD_LDFLAGS  += -mllvm -enable-ml-inliner=release
-
+# Cortex-a55
 KBUILD_CFLAGS   += -O3 -march=armv8.2-a+lse+crypto+dotprod -mcpu=cortex-a55 --cuda-path=/dev/null
 KBUILD_AFLAGS   += -O3 -march=armv8.2-a+lse+crypto+dotprod -mcpu=cortex-a55
 KBUILD_LDFLAGS  += -O3 --plugin-opt=O3
