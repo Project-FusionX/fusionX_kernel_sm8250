@@ -2133,17 +2133,14 @@ bad:
 	newc->hash = context_compute_hash(s);
 	pr_info("SELinux:  Context %s became invalid (unmapped).\n",
 		newc->str);
-#else
-	context_destroy(newc);
-#endif
-	return 0;
-#else
-	return 0;
-#endif
-}
-
-static void security_load_policycaps(struct selinux_state *state)
-{
+ #else
+ 	context_destroy(newc);
+ #endif
+ 	return 0;
+ }
+ 
+ static void security_load_policycaps(struct selinux_state *state)
+ {
 	struct policydb *p = &state->ss->policydb;
 	unsigned int i;
 	struct ebitmap_node *node;
