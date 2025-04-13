@@ -386,7 +386,7 @@ static unsigned int __add_curr_ctxt_cmds(struct adreno_ringbuffer *rb,
  * @rb: The ringbuffer in which commands to set memstore are added
  * @drawctxt: The context whose id is being set in memstore
  */
-static int _set_ctxt_gpu(struct adreno_ringbuffer *rb,
+static int __maybe_unused _set_ctxt_gpu(struct adreno_ringbuffer *rb,
 			struct adreno_context *drawctxt)
 {
 	unsigned int link[15], *cmds;
