@@ -51,7 +51,6 @@ static inline u32 get_pelt_divider(struct sched_avg *avg)
  * We map this information into the LSB bit of the utilization saved at
  * dequeue time (i.e. util_est.dequeued).
  */
-#define UTIL_AVG_UNCHANGED 0x1
 
 static inline void cfs_se_util_change(struct sched_avg *avg)
 {
@@ -240,5 +239,3 @@ update_idle_rq_clock_pelt(struct rq *rq) { }
 
 static inline void update_idle_cfs_rq_clock_pelt(struct cfs_rq *cfs_rq) { }
 #endif
-
-
