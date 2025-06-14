@@ -25,7 +25,12 @@
  * satisfy the overall load at any given moment.
  */
 
-#include <drm/drm_refresh_rate.h>
+#include <linux/sched.h>
+#include <linux/cpuidle.h>
+#include <linux/topology.h>
+
+/* External variable declaration - should be defined elsewhere in kernel */
+extern int msm_panel_fps;
 
 struct cass_cpu_cand {
 	int cpu;
@@ -67,6 +72,9 @@ void cass_cpu_util(struct cass_cpu_cand *c, int this_cpu, bool sync)
 	/* Get the utilization of everything other than CFS tasks */
 	c->hard_util = cpu_util_rt(rq) + cpu_util_dl(rq) + cpu_util_irq(rq);
 
+	/* Get the no-thermal capacity */
+	c->cap_no_therm = c->cap_max;
+
 	/*
 	 * Account for lost capacity due to time spent in RT/DL tasks and IRQs.
 	 * Capacity is considered lost to RT tasks even when @p is an RT task in
@@ -74,6 +82,7 @@ void cass_cpu_util(struct cass_cpu_cand *c, int this_cpu, bool sync)
 	 * CFS and RT tasks when CASS selects a CPU for them.
 	 */
 	c->cap = c->cap_max - min(c->hard_util, c->cap_max - 1);
+}
 
 /*
  * Returns true if @c is a little CPU.
@@ -125,9 +134,9 @@ bool cass_cpu_better(const struct cass_cpu_cand *a,
 		goto done;
 
 	/* 
-	Prefer the CPU that isn't the slowest one in the system for
-	regular usage and Prefer the CPU that isn't the fastest one otherwise
-	*/
+	 * Prefer the CPU that isn't the slowest one in the system for
+	 * regular usage and Prefer the CPU that isn't the fastest one otherwise
+	 */
 	if ((msm_panel_fps <= 20) ? (cass_cmp(cass_little_cpu(b), cass_little_cpu(a)))
 		: (cass_cmp(cass_prime_cpu(b), cass_prime_cpu(a))))
 		goto done;
@@ -165,6 +174,8 @@ bool cass_cpu_better(const struct cass_cpu_cand *a,
 done:
 	/* @a is a better CPU than @b if @res is positive */
 	return res > 0;
+#undef cass_cmp
+#undef cass_eq
 }
 
 static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync, bool rt)
